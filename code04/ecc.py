@@ -1,8 +1,12 @@
+from io import BytesIO
 from random import randint
 import unittest
 
 import hashlib
 import hmac
+
+from helper import encode_base58_checksum, hash160
+
 
 class FieldElement:
 
