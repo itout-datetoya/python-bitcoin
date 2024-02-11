@@ -95,9 +95,10 @@ class Tx:
     def id(self):
         return self.hash().hex()
     
-    def hash(self)
+    def hash(self):
         return hash256(self.serialize())[::-1]
     
+    @classmethod
     def parse(cls, s, testnet=False):
         version = little_endian_to_int(s.read(4))
         num_inputs = read_varint(s)
@@ -122,7 +123,7 @@ class Tx:
         result += int_to_little_endian(self.locktime, 4)
         return result
     
-    def fee(self)
+    def fee(self):
         for tx_in in self.tx_ins:
             input_sum += tx_in.value()
         for tx_out in self.tx_outs:
@@ -141,12 +142,13 @@ class TxIn:
             self.script_sig = script_sig
         self.sequence = sequence
 
-    def __repr__(self)
+    def __repr__(self):
         return '{}:{}'.format(
             self.prev_tx.hex(),
             self.prev_index,
         )
     
+    @classmethod
     def parse(cls, s):
         prev_tx = s.read(32)[::-1]
         prev_index = little_endian_to_int(s.read(4))
@@ -182,6 +184,7 @@ class TxOut:
     def __repr__(self):
         return '{}:{}'.format(self.amount, self.script_pubkey)
     
+    @classmethod
     def parse(cls, s):
         amount = little_endian_to_int(s.read(8))
         script_pubkey = Script.parse(s)
