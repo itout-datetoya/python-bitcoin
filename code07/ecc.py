@@ -366,6 +366,7 @@ class S256Point(Point):
             prefix = b'\x00'
         return encode_base58_checksum(prefix + h160)
     
+    @classmethod
     def parse(self, sec_bin):
         if sec_bin[0] == 4:
             x = int.from_bytes(sec_bin[1:33], 'big')
@@ -415,6 +416,7 @@ class Signature:
         result += bytes([2, len(sbin)]) + sbin
         return bytes([0x30, len(result)]) + result
     
+    @classmethod
     def parse(cls, signature_bin):
         s = BytesIO(signature_bin)
         compound = s.read(1)[0]

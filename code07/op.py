@@ -1,5 +1,6 @@
 import hashlib
 
+from logging import getLogger
 from unittest import TestCase
 
 from ecc import (
@@ -13,7 +14,9 @@ from helper import (
 )
 
 
-# tag::source3[]
+LOGGER = getLogger(__name__)
+
+
 def encode_num(num):
     if num == 0:
         return b''
@@ -23,6 +26,9 @@ def encode_num(num):
     while abs_num:
         result.append(abs_num & 0xff)
         abs_num >>= 8
+    # if the top bit is set,
+    # for negative numbers we ensure that the top bit is set
+    # for positive numbers we ensure that the top bit is not set
     if result[-1] & 0x80:
         if negative:
             result.append(0x80)
@@ -36,7 +42,9 @@ def encode_num(num):
 def decode_num(element):
     if element == b'':
         return 0
+    # reverse for big endian
     big_endian = element[::-1]
+    # top bit being 1 means it's negative
     if big_endian[0] & 0x80:
         negative = True
         result = big_endian[0] & 0x7f
@@ -55,7 +63,6 @@ def decode_num(element):
 def op_0(stack):
     stack.append(encode_num(0))
     return True
-# end::source3[]
 
 
 def op_1negate(stack):
@@ -309,13 +316,11 @@ def op_drop(stack):
     return True
 
 
-# tag::source1[]
 def op_dup(stack):
-    if len(stack) < 1:  # <1>
+    if len(stack) < 1:
         return False
-    stack.append(stack[-1])  # <2>
+    stack.append(stack[-1])
     return True
-# end::source1[]
 
 
 def op_nip(stack):
@@ -470,15 +475,6 @@ def op_sub(stack):
     element1 = decode_num(stack.pop())
     element2 = decode_num(stack.pop())
     stack.append(encode_num(element2 - element1))
-    return True
-
-
-def op_mul(stack):
-    if len(stack) < 2:
-        return False
-    element1 = decode_num(stack.pop())
-    element2 = decode_num(stack.pop())
-    stack.append(encode_num(element2 * element1))
     return True
 
 
@@ -645,42 +641,42 @@ def op_sha256(stack):
 
 def op_hash160(stack):
     # check that there's at least 1 element on the stack
-    # pop off the top element from the stack
-    # push a hash160 of the popped off element to the stack
     if len(stack) < 1:
         return False
+    # pop off the top element from the stack
     element = stack.pop()
-    stack.append(hash160(element))
+    # push a hash160 of the popped off element to the stack
+    h160 = hash160(element)
+    stack.append(h160)
     return True
 
 
-# tag::source2[]
 def op_hash256(stack):
     if len(stack) < 1:
         return False
     element = stack.pop()
     stack.append(hash256(element))
     return True
-# end::source2[]
 
 
 def op_checksig(stack, z):
     # check that there are at least 2 elements on the stack
-    # the top element of the stack is the SEC pubkey
-    # the next element of the stack is the DER signature
-    # take off the last byte of the signature as that's the hash_type
-    # parse the serialized pubkey and signature into objects
-    # verify the signature using S256Point.verify()
-    # push an encoded 1 or 0 depending on whether the signature verified
     if len(stack) < 2:
         return False
+    # the top element of the stack is the SEC pubkey
     sec_pubkey = stack.pop()
+    # the next element of the stack is the DER signature
+    # take off the last byte of the signature as that's the hash_type
     der_signature = stack.pop()[:-1]
+    # parse the serialized pubkey and signature into objects
     try:
         point = S256Point.parse(sec_pubkey)
         sig = Signature.parse(der_signature)
     except (ValueError, SyntaxError) as e:
+        LOGGER.info(e)
         return False
+    # verify the signature using S256Point.verify()
+    # push an encoded 1 or 0 depending on whether the signature verified
     if point.verify(z, sig):
         stack.append(encode_num(1))
     else:
@@ -807,7 +803,6 @@ OP_CODE_FUNCTIONS = {
     146: op_0notequal,
     147: op_add,
     148: op_sub,
-    149: op_mul,
     154: op_booland,
     155: op_boolor,
     156: op_numequal,
@@ -900,7 +895,6 @@ OP_CODE_NAMES = {
     146: 'OP_0NOTEQUAL',
     147: 'OP_ADD',
     148: 'OP_SUB',
-    149: 'OP_MUL',
     154: 'OP_BOOLAND',
     155: 'OP_BOOLOR',
     156: 'OP_NUMEQUAL',

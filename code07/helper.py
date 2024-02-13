@@ -3,9 +3,11 @@ from unittest import TestCase, TestSuite, TextTestRunner
 import hashlib
 
 
-# tag::source1[]
+SIGHASH_ALL = 1
+SIGHASH_NONE = 2
+SIGHASH_SINGLE = 3
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-# end::source1[]
+
 
 
 def run(test):
