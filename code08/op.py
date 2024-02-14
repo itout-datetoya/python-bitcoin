@@ -689,7 +689,39 @@ def op_checksigverify(stack, z):
 
 
 def op_checkmultisig(stack, z):
-    raise NotImplementedError
+    if len(stack) < 1:
+        return False
+    n = decode_num(stack.pop())
+    if len(stack) < n + 1:
+        return False
+    sec_pubkeys = []
+    for _ in range(n):
+        sec_pubkeys.append(stack.pop())
+    m = decode_num(stack.pop())
+    if len(stack) < m + 1:
+        return False
+    der_signatures = []
+    for _ in range(m):
+        der_signatures.append(stack.pop())[:-1]
+    stack.pop()
+    try:
+        points = []
+        for i in range(n):
+            points.append(S256Point.parse(sec_pubkeys[i]))
+        sigs = []
+        for i in range(m):
+            sigs.append(Signature.parse(der_signatures[i]))
+        for sig in sigs:
+            if len(points) == 0:
+                return False
+            while points:
+                point = points.pop(0)
+                if point.verify(z, sig):
+                    break
+        stack.push(encode_num(1))
+    except (ValueError, SyntaxError):
+        return False
+    return True
 
 
 def op_checkmultisigverify(stack, z):
