@@ -702,7 +702,7 @@ def op_checkmultisig(stack, z):
         return False
     der_signatures = []
     for _ in range(m):
-        der_signatures.append(stack.pop())[:-1]
+        der_signatures.append(stack.pop()[:-1])
     stack.pop()
     try:
         points = []
@@ -718,7 +718,7 @@ def op_checkmultisig(stack, z):
                 point = points.pop(0)
                 if point.verify(z, sig):
                     break
-        stack.push(encode_num(1))
+        stack.append(encode_num(1))
     except (ValueError, SyntaxError):
         return False
     return True
