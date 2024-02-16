@@ -6,7 +6,8 @@ SIGHASH_ALL = 1
 SIGHASH_NONE = 2
 SIGHASH_SINGLE = 3
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-
+TWO_WEEKS = 60 * 60 * 24 * 14
+MAX_TARGET = 0xffff * 256**(0x1d - 3)
 
 
 def run(test):
@@ -118,6 +119,34 @@ def h160_to_p2sh_address(h160, testnet=False):
             prefix = b'\x05'
         return encode_base58_checksum(prefix + h160)
 
+def bits_to_target(bits):
+    exponent = bits[-1]
+    coefficient = little_endian_to_int(bits[:-1])
+    return coefficient * 256**(exponent-3)
+
+def target_to_bits(target):
+    raw_bytes = target.to_bytes(32, 'big')
+    raw_bytes = raw_bytes.lstrip(b'\x00')
+    if raw_bytes[0] > 0x7f:
+        exponent = len(raw_bytes) + 1
+        coefficient = b'\x00' + raw_bytes[:2]
+    else:
+        exponent = len(raw_bytes)
+        coefficient = raw_bytes[:3]
+    new_bits = coefficient[::-1] + bytes([exponent])
+    return new_bits
+
+def calculate_new_bits(prev_bits, time_differential):
+    if time_differential > TWO_WEEKS * 4:
+        time_differential = TWO_WEEKS * 4
+    if time_differential < TWO_WEEKS // 4:
+        time_differential = TWO_WEEKS // 4
+    new_target = bits_to_target(prev_bits) * time_differential // TWO_WEEKS
+    if new_target > MAX_TARGET:
+        new_target = MAX_TARGET
+    return target_to_bits(new_target)
+
+
 
 class HelperTest(unittest.TestCase):
 
@@ -158,7 +187,12 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(h160_to_p2sh_address(h160, testnet=False), want)
         want = '2N3u1R6uwQfuobCqbCgBkpsgBxvr1tZpe7B'
         self.assertEqual(h160_to_p2sh_address(h160, testnet=True), want)
-
+    
+    def test_calculate_new_bits(self):
+        prev_bits = bytes.fromhex('54d80118')
+        time_differential = 302400
+        want = bytes.fromhex('00157617')
+        self.assertEqual(calculate_new_bits(prev_bits, time_differential), want)
 
 if __name__ == "__main__":
     unittest.main()
