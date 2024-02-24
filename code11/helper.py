@@ -146,6 +146,43 @@ def calculate_new_bits(prev_bits, time_differential):
         new_target = MAX_TARGET
     return target_to_bits(new_target)
 
+def merkle_parent(hash1, hash2):
+    return hash256(hash1 + hash2)
+
+def merkle_parent_level(hashes):
+    if len(hashes) == 1:
+        raise RuntimeError('Cannot take a parent level with only 1 item')
+    if len(hashes) % 2 == 1:
+        hashes.append(hashes[-1])
+    parent_level = []
+    for i in range(0, len(hashes), 2):
+        parent_level.append(merkle_parent(hashes[i], hashes[i+1]))
+    return parent_level
+
+def merkle_root(hashes):
+    current_level = hashes
+    while len(current_level) > 1:
+        current_level = merkle_parent_level(current_level)
+    return current_level[0]
+
+def bit_field_to_bytes(bit_field):
+    if len(bit_field) % 8 != 0:
+        raise RuntimeError('bit_field does not have a length that is divisible by 8')
+    result = bytearray(len(bit_field) // 8)
+    for i, bit in enumerate(bit_field):
+        byte_index, bit_index = divmod(i, 8)
+        if bit:
+            result[byte_index] |= 1 << bit_index
+    return bytes(result)
+
+def bytes_to_bit_field(some_bytes):
+    flag_bits = []
+    for byte in some_bytes:
+        for _ in range(8):
+            flag_bits.append(byte & 1)
+            byte >>= 1
+    return flag_bits
+
 
 
 class HelperTest(unittest.TestCase):
